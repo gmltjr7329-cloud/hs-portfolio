@@ -1,10 +1,16 @@
 # HS Portfolio
 
+**🔗 데모 사이트: https://hs-portfolio-2f0n.onrender.com**
+
+> 무료 서버라 한동안 접속이 없으면 잠들어 있어, 첫 접속 시 화면이 뜨기까지 1분 정도 걸릴 수 있습니다.
+
 개인 자산(주식·현금·예적금·부채·급여)을 한 화면에서 관리하는 웹 애플리케이션입니다.
-**Flask 백엔드 + REST API + JavaScript 프론트엔드**로 구성했고, 모든 데이터는 서버 DB에 저장됩니다.
+**Flask 백엔드 + REST API + JavaScript 프론트엔드**로 직접 설계·구현했고, 모든 데이터는 서버 DB(PostgreSQL)에 저장됩니다.
 
 > 포트폴리오용 데모라 로그인 없이 바로 열립니다.
-> 데모 화면에서 추가·수정·삭제한 내용은 서버 DB에 저장되므로, **다른 컴퓨터나 브라우저로 접속해도 같은 데이터가 보입니다.**
+> 데모 화면에서 추가·수정·삭제한 내용은 서버 DB에 저장되므로, **다른 컴퓨터나 휴대폰으로 접속해도 같은 데이터가 보입니다.**
+
+---
 
 ## 화면
 
@@ -38,10 +44,14 @@
 
 ## 기술 스택
 
-- **Backend**: Python, Flask 3, Flask-SQLAlchemy (SQLite 기본 / PostgreSQL 지원)
-- **Frontend**: Jinja2 템플릿, Vanilla JavaScript (빌드 도구 없음), CSS
-- **외부 API**: Alpha Vantage (해외주식 시세)
-- **Test**: pytest
+| 구분 | 사용 기술 |
+|---|---|
+| Backend | Python, Flask 3, Flask-SQLAlchemy |
+| Database | PostgreSQL (Supabase, 배포) / SQLite (로컬 개발) |
+| Frontend | Jinja2 템플릿, Vanilla JavaScript (빌드 도구 없음), CSS (반응형) |
+| 외부 API | Alpha Vantage (해외주식 시세) |
+| 배포 | Render (gunicorn) + Supabase |
+| Test | pytest (API 테스트 12개) |
 
 ---
 
@@ -51,19 +61,20 @@
 브라우저 (static/js/app.js)
    │  fetch /api/...  (JSON)
    ▼
-Flask (app/routes/api.py)
+Flask  ── Render 서버 (gunicorn)
    ├─ 입력 검증      app/validators.py
    ├─ 요약 계산      app/services/summary_service.py
    ├─ 시세 조회      app/services/price_service.py ──▶ Alpha Vantage
-   └─ DB 저장        app/models.py ──▶ SQLite / PostgreSQL
+   └─ DB 저장        app/models.py ──▶ Supabase PostgreSQL (로컬: SQLite)
 ```
 
 ```
-hs_portfolio/
+hs-portfolio/
 ├── run.py                  # 실행 진입점
 ├── config.py               # 설정 (환경변수)
 ├── requirements.txt
-├── .env.example
+├── render.yaml             # Render 배포 설정
+├── .env.example            # 환경변수 예시 (실제 .env는 저장소에 올리지 않음)
 ├── app/
 │   ├── __init__.py         # 앱 팩토리, 로깅, 에러 처리
 │   ├── extensions.py       # SQLAlchemy
@@ -79,29 +90,8 @@ hs_portfolio/
 │   │   └── summary_service.py
 │   ├── templates/          # base / index / error
 │   └── static/             # css, js, favicon
+├── screenshots/            # README 화면 캡처
 └── tests/test_api.py
-```
-
----
-
-## 실행 방법 (Mac 기준)
-
-```bash
-cd hs_portfolio
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-cp .env.example .env        # ALPHA_VANTAGE_API_KEY 입력 (없어도 실행됨, 시세 업데이트만 비활성)
-python run.py
-```
-
-브라우저에서 http://127.0.0.1:5000 접속. 처음 실행하면 샘플 데이터가 자동으로 들어갑니다.
-
-테스트:
-
-```bash
-python -m pytest -q
 ```
 
 ---
@@ -136,15 +126,62 @@ python -m pytest -q
 - **XSS 방지**: 화면에 사용자 입력을 넣을 때 `innerHTML`을 쓰지 않고 `textContent`만 사용, CSP 헤더 적용
 - **공개 데모 보호**: 쓰기 요청에 출처 확인 헤더 필수, IP당 분당 쓰기 횟수 제한, 테이블당 저장 개수 제한
 - **시세 API 절약**: 같은 티커는 5분간 캐시, 여러 종목은 간격을 두고 순차 조회
+- **샘플 데이터 중복 방지**: DB가 비어 있을 때 한 번만 넣고, 재배포해도 다시 넣지 않음
 - **로깅**: 콘솔 + `logs/app.log` (자동 순환)
+
+---
+
+## 개발하며 해결한 문제
+
+### 1. 배포 서버에서 DB 드라이버를 찾지 못함
+- **증상**: PostgreSQL 연결 시 `No module named 'psycopg'` 오류
+- **원인**: SQLAlchemy 2.1부터 `postgresql://` 주소에 드라이버를 지정하지 않으면 psycopg v3를 찾는데, 설치된 것은 psycopg2였음
+- **해결**: 설정에서 `postgres://`·`postgresql://` 주소를 `postgresql+psycopg2://`로 바꿔 드라이버를 고정 (`config.py`)
+
+### 2. Render에서 Supabase DB에 접속되지 않음
+- **원인**: Supabase의 Direct connection 주소는 IPv6 전용인데, Render 무료 서버는 IPv6로 외부에 접속할 수 없음
+- **해결**: IPv4를 지원하는 **Session pooler** 주소(포트 5432)로 변경
+
+### 3. 무료 서버 재시작 시 데이터가 사라지는 문제
+- **원인**: Render 무료 서버는 재시작·재배포 때 서버 안의 파일(SQLite DB 포함)이 초기화됨
+- **해결**: 데이터는 외부 DB(Supabase PostgreSQL)에 저장하고, 로컬 개발은 환경변수가 없으면 자동으로 SQLite를 쓰도록 분리
+
+### 4. 시세 API 호출 한도
+- **원인**: 무료 시세 API는 분당·일일 호출 수가 제한되어, 여러 종목을 한 번에 조회하면 한도에 걸림
+- **해결**: 서버에서 같은 티커를 5분간 캐시하고, 화면에서는 종목을 1.2초 간격으로 순차 조회. 실패 시 원인을 한국어로 안내
+
+---
+
+## 로컬 실행 방법 (Mac 기준)
+
+```bash
+git clone https://github.com/<아이디>/hs-portfolio.git
+cd hs-portfolio
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env        # ALPHA_VANTAGE_API_KEY 입력 (없어도 실행됨, 시세 업데이트만 비활성)
+python run.py
+```
+
+브라우저에서 http://127.0.0.1:5000 접속. 처음 실행하면 샘플 데이터가 자동으로 들어갑니다.
+`DATABASE_URL`을 비워 두면 로컬 SQLite(`instance/portfolio.db`)를 사용합니다.
+
+> Mac에서 5000번 포트가 이미 사용 중이면(AirPlay 수신 등) 다른 포트로 실행합니다: `PORT=5001 python run.py`
+
+테스트:
+
+```bash
+python -m pytest -q
+```
 
 ---
 
 ## 배포 (Render + Supabase)
 
 - **서버**: Render 무료 웹 서비스. 설정은 `render.yaml`에 있습니다.
-- **DB**: Supabase PostgreSQL. Render 서버는 재시작하면 내부 파일이 초기화되므로, 데이터는 외부 DB에 저장합니다.
-- **연결 주소**: Render는 IPv6로 외부에 접속할 수 없어서, Supabase의 Direct connection 주소 대신 **Session pooler** 주소(포트 5432)를 사용합니다.
-- **환경변수**: `DATABASE_URL`, `ALPHA_VANTAGE_API_KEY`는 Render 대시보드에서만 입력합니다. 저장소에는 올리지 않습니다.
-- **실행 명령**: `gunicorn run:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT`
+- **DB**: Supabase PostgreSQL (Session pooler 주소 사용)
+- **환경변수**: `DATABASE_URL`, `ALPHA_VANTAGE_API_KEY`는 Render 대시보드에서만 입력하고 저장소에는 올리지 않습니다.
+- **실행 명령**: `gunicorn run:app --workers 1 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT`
 - 무료 서버는 15분 동안 접속이 없으면 잠들고, 다음 첫 접속 때 깨어나는 데 1분 정도 걸립니다.

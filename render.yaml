@@ -1,0 +1,25 @@
+# Render 배포 설정 (Blueprint)
+# 비밀값(DATABASE_URL, ALPHA_VANTAGE_API_KEY)은 여기에 쓰지 않고, Render 화면에서 직접 입력한다.
+services:
+  - type: web
+    name: hs-portfolio
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    # 작업 프로세스 1개 + 스레드 4개: 무료 서버 메모리에 맞추고, 시작 시 DB 초기화가 한 번만 일어나게 한다.
+    startCommand: gunicorn run:app --workers 1 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: TRUST_PROXY
+        value: "true"
+      - key: SEED_ON_EMPTY
+        value: "true"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false

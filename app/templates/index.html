@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="brand">
+      <span class="brand__mark">HS</span>
+      <span class="brand__name">HS Portfolio</span>
+    </div>
+    <div class="topbar__right">
+      <span class="badge badge--dark">DEMO</span>
+      <span class="muted small" id="last-sync"></span>
+    </div>
+  </div>
+</header>
+
+<div class="demo-banner" role="note">
+  <div class="demo-banner__inner">
+    포트폴리오 데모입니다. 이 화면에서 추가·수정·삭제한 내용은 <strong>서버 DB에 저장</strong>되어,
+    다른 기기나 브라우저로 접속해도 그대로 보입니다.
+  </div>
+</div>
+
+<nav class="tabs" aria-label="메뉴">
+  <div class="tabs__inner" id="tabs" role="tablist"></div>
+</nav>
+
+<main class="container" id="view" aria-live="polite">
+  <div class="loading">불러오는 중...</div>
+</main>
+
+<div id="modal-root"></div>
+<div id="toast-root" aria-live="assertive"></div>
+
+<script src="{{ url_for('static', filename='js/app.js', v=app_version) }}" defer></script>
+{% endblock %}

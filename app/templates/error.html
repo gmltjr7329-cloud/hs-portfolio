@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} | HS Portfolio{% endblock %}
+{% block body %}
+<main class="error-page">
+  <div class="error-page__code">{{ code }}</div>
+  <p class="muted">{{ message }}</p>
+  <a class="btn btn--dark" href="{{ url_for('main.index') }}">홈으로</a>
+</main>
+{% endblock %}

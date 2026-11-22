@@ -1,0 +1,13 @@
+Flask>=3.0,<4
+Flask-SQLAlchemy>=3.1,<4
+python-dotenv>=1.0
+requests>=2.31
+tzdata>=2024.1
+
+# 배포 서버 실행 (Windows에서는 설치되지 않음 - 로컬은 python run.py 사용)
+gunicorn>=22.0; platform_system != "Windows"
+# PostgreSQL(Supabase) 연결
+psycopg2-binary>=2.9
+
+# 테스트
+pytest>=8.0

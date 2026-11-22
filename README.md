@@ -16,17 +16,17 @@
 ### 나의 총 자산
 순자산, 총 자산·부채, 주식 평가손익, 이번 달 가용 금액과 자산 비중 차트를 한 화면에 보여줍니다.
 
-![나의 총 자산](screenshots/01_dashboard.png)
+![나의 총 자산](screenshots/dashboard.png)
 
 ### 자산 관리
 급여를 입력하면 이번 달 금액에 합산되고, 공제 항목과 고정 지출을 빼서 실수령액·가용 금액을 자동으로 계산합니다.
 
-![자산 관리](screenshots/02_manage.png)
+![자산 관리](screenshots/manage.png)
 
 ### 내 주식 내역
 해외주식은 서버가 Alpha Vantage API로 실시간 시세를 받아오고, 설정한 환율로 원화 평가액과 수익률을 계산합니다.
 
-![내 주식 내역](screenshots/03_stocks.png)
+![내 주식 내역](screenshots/stocks.png)
 
 ---
 
